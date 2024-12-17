@@ -23,8 +23,6 @@ export function useMusicLibrary() {
 				first: 1000, // Limit to first 1000 tracks
 			});
 
-			console.log("WTF: ", assets);
-
 			const formattedTracks = assets.map((track) => ({
 				id: track.id,
 				uri: track.uri,

@@ -4,11 +4,13 @@ import {
 	Text,
 	StyleSheet,
 	TouchableOpacity,
-	ScrollView,
 	FlatList,
+	ScrollView,
+	SafeAreaView,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { PlayerContext } from "../context/PlayerContext";
+import { PlaylistContext } from "../context/PlaylistContext";
 import {
 	Clock,
 	List,
@@ -16,18 +18,21 @@ import {
 	Music2,
 	ChevronRight,
 	PlayCircle,
+	Library,
 } from "lucide-react-native";
 
 export default function LibraryScreen() {
 	const router = useRouter();
 	const { playlist: tracks, play } = useContext(PlayerContext);
+	const { playlists } = useContext(PlaylistContext);
 	const [activeTab, setActiveTab] = useState("all");
 
-	const recentlyPlayed = tracks.slice(0, 5); // Simulate recently played
+	const recentlyPlayed = tracks.slice(0, 5); // Just for demonstration, should be managed in PlayerContext
 
 	const tabs = [
 		{ id: "all", label: "All Tracks", icon: List },
-		{ id: "recent", label: "Recently Played", icon: Clock },
+		{ id: "recent", label: "Recent", icon: Clock },
+		{ id: "playlists", label: "Playlists", icon: Library },
 	];
 
 	const renderTrackItem = ({ item }) => (
@@ -46,7 +51,38 @@ export default function LibraryScreen() {
 					{item.filename.replace(/\.[^/.]+$/, "")}
 				</Text>
 			</View>
-			<PlayCircle color="#B3B3B3" size={24} />
+			<TouchableOpacity
+				style={styles.playButton}
+				onPress={() => play(item, tracks)}
+			>
+				<PlayCircle color="#1DB954" size={24} />
+			</TouchableOpacity>
+		</TouchableOpacity>
+	);
+
+	const renderPlaylistItem = ({ item }) => (
+		<TouchableOpacity
+			style={styles.playlistItem}
+			onPress={() => router.push(`/playlist/${item.id}`)}
+		>
+			<View style={styles.playlistIconContainer}>
+				<Library color="#1DB954" size={24} />
+			</View>
+			<View style={styles.playlistInfo}>
+				<Text
+					style={styles.playlistTitle}
+					numberOfLines={1}
+				>
+					{item.name}
+				</Text>
+				<Text style={styles.playlistSubtitle}>
+					{item.tracks?.length || 0}{" "}
+					{(item.tracks?.length || 0) === 1
+						? "track"
+						: "tracks"}
+				</Text>
+			</View>
+			<ChevronRight color="#B3B3B3" size={24} />
 		</TouchableOpacity>
 	);
 
@@ -58,7 +94,9 @@ export default function LibraryScreen() {
 						data={recentlyPlayed}
 						renderItem={renderTrackItem}
 						keyExtractor={(item) => item.id}
-						style={styles.trackList}
+						contentContainerStyle={
+							styles.listContent
+						}
 						ListEmptyComponent={
 							<Text
 								style={
@@ -71,13 +109,94 @@ export default function LibraryScreen() {
 						}
 					/>
 				);
-			case "all":
+			case "playlists":
+				return (
+					<View style={styles.playlistsContainer}>
+						<TouchableOpacity
+							style={
+								styles.createPlaylistButton
+							}
+							onPress={() =>
+								router.push(
+									"/playlist",
+								)
+							}
+						>
+							<View
+								style={
+									styles.createPlaylistIcon
+								}
+							>
+								<Plus
+									color="white"
+									size={
+										24
+									}
+								/>
+							</View>
+							<View
+								style={
+									styles.createPlaylistInfo
+								}
+							>
+								<Text
+									style={
+										styles.createPlaylistText
+									}
+								>
+									Create
+									Playlist
+								</Text>
+								<Text
+									style={
+										styles.createPlaylistSubtext
+									}
+								>
+									Add your
+									favorite
+									tracks
+								</Text>
+							</View>
+							<ChevronRight
+								color="#B3B3B3"
+								size={24}
+							/>
+						</TouchableOpacity>
+
+						<FlatList
+							data={playlists}
+							renderItem={
+								renderPlaylistItem
+							}
+							keyExtractor={(item) =>
+								item.id
+							}
+							contentContainerStyle={
+								styles.listContent
+							}
+							ListEmptyComponent={
+								<Text
+									style={
+										styles.emptyText
+									}
+								>
+									No
+									playlists
+									yet
+								</Text>
+							}
+						/>
+					</View>
+				);
+			default: // 'all' tab
 				return (
 					<FlatList
 						data={tracks}
 						renderItem={renderTrackItem}
 						keyExtractor={(item) => item.id}
-						style={styles.trackList}
+						contentContainerStyle={
+							styles.listContent
+						}
 						ListEmptyComponent={
 							<Text
 								style={
@@ -89,30 +208,11 @@ export default function LibraryScreen() {
 						}
 					/>
 				);
-			default:
-				return null;
 		}
 	};
 
-	const renderCreatePlaylist = () => (
-		<TouchableOpacity style={styles.createPlaylist}>
-			<View style={styles.createPlaylistIcon}>
-				<Plus color="white" size={24} />
-			</View>
-			<View style={styles.createPlaylistInfo}>
-				<Text style={styles.createPlaylistText}>
-					Create Playlist
-				</Text>
-				<Text style={styles.createPlaylistSubtext}>
-					Add your favorite tracks
-				</Text>
-			</View>
-			<ChevronRight color="#B3B3B3" size={24} />
-		</TouchableOpacity>
-	);
-
 	return (
-		<View style={styles.container}>
+		<SafeAreaView style={styles.container}>
 			<View style={styles.header}>
 				<Text style={styles.headerTitle}>
 					Your Library
@@ -120,44 +220,52 @@ export default function LibraryScreen() {
 			</View>
 
 			<View style={styles.tabContainer}>
-				{tabs.map((tab) => (
-					<TouchableOpacity
-						key={tab.id}
-						style={[
-							styles.tab,
-							activeTab === tab.id &&
-								styles.activeTab,
-						]}
-						onPress={() =>
-							setActiveTab(tab.id)
-						}
-					>
-						<tab.icon
-							size={20}
-							color={
-								activeTab ===
-								tab.id
-									? "#1DB954"
-									: "#B3B3B3"
-							}
-						/>
-						<Text
+				<ScrollView
+					horizontal
+					showsHorizontalScrollIndicator={false}
+					contentContainerStyle={styles.tabScroll}
+				>
+					{tabs.map((tab) => (
+						<TouchableOpacity
+							key={tab.id}
 							style={[
-								styles.tabText,
+								styles.tab,
 								activeTab ===
 									tab.id &&
-									styles.activeTabText,
+									styles.activeTab,
 							]}
+							onPress={() =>
+								setActiveTab(
+									tab.id,
+								)
+							}
 						>
-							{tab.label}
-						</Text>
-					</TouchableOpacity>
-				))}
+							<tab.icon
+								size={18}
+								color={
+									activeTab ===
+									tab.id
+										? "#1DB954"
+										: "#B3B3B3"
+								}
+							/>
+							<Text
+								style={[
+									styles.tabText,
+									activeTab ===
+										tab.id &&
+										styles.activeTabText,
+								]}
+							>
+								{tab.label}
+							</Text>
+						</TouchableOpacity>
+					))}
+				</ScrollView>
 			</View>
 
-			{renderCreatePlaylist()}
-			{renderContent()}
-		</View>
+			<View style={styles.content}>{renderContent()}</View>
+		</SafeAreaView>
 	);
 }
 
@@ -168,8 +276,8 @@ const styles = StyleSheet.create({
 	},
 	header: {
 		paddingHorizontal: 20,
-		paddingTop: 60,
-		paddingBottom: 20,
+		paddingTop: 20,
+		paddingBottom: 16,
 	},
 	headerTitle: {
 		color: "white",
@@ -177,9 +285,10 @@ const styles = StyleSheet.create({
 		fontWeight: "bold",
 	},
 	tabContainer: {
-		flexDirection: "row",
+		marginBottom: 16,
+	},
+	tabScroll: {
 		paddingHorizontal: 20,
-		marginBottom: 20,
 	},
 	tab: {
 		flexDirection: "row",
@@ -188,73 +297,78 @@ const styles = StyleSheet.create({
 		paddingHorizontal: 16,
 		borderRadius: 20,
 		backgroundColor: "#282828",
-		marginRight: 10,
+		marginRight: 8,
 	},
 	activeTab: {
-		backgroundColor: "#333",
+		backgroundColor: "#333333",
 	},
 	tabText: {
 		color: "#B3B3B3",
 		marginLeft: 8,
 		fontSize: 14,
+		fontWeight: "500",
 	},
 	activeTabText: {
 		color: "#1DB954",
 	},
-	trackList: {
+	content: {
 		flex: 1,
-		paddingBottom: 130, // Increased padding for both bottom elements
 	},
-
+	listContent: {
+		paddingBottom: 130, // Space for bottom nav and mini player
+	},
 	trackItem: {
 		flexDirection: "row",
 		alignItems: "center",
-		padding: 16,
+		paddingVertical: 12,
+		paddingHorizontal: 20,
 		borderBottomWidth: 1,
 		borderBottomColor: "#282828",
 	},
 	trackIconContainer: {
 		width: 40,
 		height: 40,
-		borderRadius: 4,
 		backgroundColor: "#282828",
+		borderRadius: 4,
 		justifyContent: "center",
 		alignItems: "center",
-		marginRight: 12,
 	},
 	trackInfo: {
 		flex: 1,
-		marginRight: 12,
+		marginLeft: 12,
+		marginRight: 8,
 	},
 	trackTitle: {
 		color: "white",
 		fontSize: 16,
+		fontWeight: "500",
 	},
-	emptyText: {
-		color: "#B3B3B3",
-		textAlign: "center",
-		marginTop: 40,
-		fontSize: 16,
+	playButton: {
+		padding: 8,
 	},
-	createPlaylist: {
+	playlistsContainer: {
+		flex: 1,
+	},
+	createPlaylistButton: {
 		flexDirection: "row",
 		alignItems: "center",
 		padding: 16,
-		borderBottomWidth: 1,
-		borderBottomColor: "#282828",
-		marginBottom: 20,
+		marginHorizontal: 20,
+		marginBottom: 16,
+		backgroundColor: "#282828",
+		borderRadius: 8,
 	},
 	createPlaylistIcon: {
 		width: 40,
 		height: 40,
-		borderRadius: 4,
 		backgroundColor: "#1DB954",
+		borderRadius: 4,
 		justifyContent: "center",
 		alignItems: "center",
-		marginRight: 12,
 	},
 	createPlaylistInfo: {
 		flex: 1,
+		marginLeft: 12,
 	},
 	createPlaylistText: {
 		color: "white",
@@ -265,5 +379,41 @@ const styles = StyleSheet.create({
 		color: "#B3B3B3",
 		fontSize: 14,
 		marginTop: 2,
+	},
+	playlistItem: {
+		flexDirection: "row",
+		alignItems: "center",
+		paddingVertical: 12,
+		paddingHorizontal: 20,
+		borderBottomWidth: 1,
+		borderBottomColor: "#282828",
+	},
+	playlistIconContainer: {
+		width: 40,
+		height: 40,
+		backgroundColor: "#282828",
+		borderRadius: 4,
+		justifyContent: "center",
+		alignItems: "center",
+	},
+	playlistInfo: {
+		flex: 1,
+		marginLeft: 12,
+	},
+	playlistTitle: {
+		color: "white",
+		fontSize: 16,
+		fontWeight: "500",
+	},
+	playlistSubtitle: {
+		color: "#B3B3B3",
+		fontSize: 14,
+		marginTop: 2,
+	},
+	emptyText: {
+		color: "#B3B3B3",
+		fontSize: 16,
+		textAlign: "center",
+		marginTop: 40,
 	},
 });

@@ -2,40 +2,35 @@ import React from "react";
 import { View, StyleSheet } from "react-native";
 import { Stack, usePathname } from "expo-router";
 import { PlayerProvider } from "../context/PlayerContext";
+import { PlaylistProvider } from "../context/PlaylistContext";
 import MiniPlayer from "../components/MiniPlayer";
 import BottomNav from "../components/BottomNav";
 
 export default function Layout() {
 	const pathname = usePathname();
-	const showBottomElements = pathname !== "/player";
+	const showMiniPlayer = pathname !== "/player";
 
 	return (
 		<PlayerProvider>
-			<View style={styles.container}>
-				<Stack
-					screenOptions={{
-						headerStyle: {
-							backgroundColor:
-								"#121212",
-						},
-						headerTintColor: "#fff",
-						headerTitleStyle: {
-							fontWeight: "bold",
-						},
-						contentStyle: {
-							backgroundColor:
-								"#121212",
-						},
-						headerShown: false,
-					}}
-				/>
-				{showBottomElements && (
-					<View style={styles.bottomElements}>
-						<MiniPlayer />
-						<BottomNav />
-					</View>
-				)}
-			</View>
+			<PlaylistProvider>
+				<View style={styles.container}>
+					<Stack
+						screenOptions={{
+							headerShown: false,
+							contentStyle: {
+								backgroundColor:
+									"#121212",
+							},
+						}}
+					/>
+					{showMiniPlayer && (
+						<>
+							<MiniPlayer />
+							<BottomNav />
+						</>
+					)}
+				</View>
+			</PlaylistProvider>
 		</PlayerProvider>
 	);
 }
